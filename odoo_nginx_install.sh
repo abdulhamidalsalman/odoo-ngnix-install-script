@@ -33,6 +33,12 @@ OE_VERSION="9.0"
 OE_SUPERADMIN="admin"
 OE_CONFIG="${OE_USER}-server"
 
+#nginx reverse proxy parameters
+NGINX_URL="odoo.mycompany.com"
+NGINX_URL_PREFIX="https://"
+NGINX_PORT="443"
+NGINX_CONFIG_FILE="$NGINX_URL" #file name for config
+
 #--------------------------------------------------
 # WKHTMLTOPDF
 # Ubuntu download links Trusty x64 & x32 === (for other distributions please replace these two links in order to have correct version of wkhtmltox installed, for a danger note refer to  https://www.odoo.com/documentation/8.0/setup/install.html#deb ):
@@ -256,3 +262,71 @@ echo "Start Odoo service: sudo service $OE_CONFIG start"
 echo "Stop Odoo service: sudo service $OE_CONFIG stop"
 echo "Restart Odoo service: sudo service $OE_CONFIG restart"
 echo "-----------------------------------------------------------"
+
+#--------------------------------------------------
+# Installing NGINX reverse proxy
+#--------------------------------------------------
+sudo apt-get install nginx -f -y
+
+NGINX_CONFIG_FILE_AVAILABLE="/etc/nginx/sites-available/$NGINX_CONFIG_FILE" #the config file
+NGINX_CONFIG_FILE_ENABLED="/etc/nginx/sites-enabled/$NGINX_CONFIG_FILE" #the link path
+echo -e "\n- NGINX config file location = $NGINX_CONFIG_FILE_AVAILABLE"
+
+echo -e "\n---- Create NGINX config file"
+sudo cp /etc/nginx/sites-available/default $NGINX_CONFIG_FILE_AVAILABLE
+sudo chown root:root $NGINX_CONFIG_FILE_AVAILABLE
+sudo chmod 640 $NGINX_CONFIG_FILE_AVAILABLE
+
+echo '################################################################################' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo 'NGINX configuration for $NGINX_URL' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '################################################################################' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo 'server {' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	listen 80;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	server_name $NGINX_URL;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	add_header Strict-Transport-Security max-age=2592000;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	rewrite ^/.*$ https://escape"$host$request_uri"? permanent;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '}' >> $NGINX_CONFIG_FILE_AVAILABLE 
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE     
+echo 'server {' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '  listen 443;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '  server_name $NGINX_URL;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '  proxy_set_header Host escape"$host";' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '  proxy_buffering off;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	# add ssl specific settings' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	# keepalive_timeout    240;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	access_log  /var/log/nginx/oddo.access.log;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	error_log   /var/log/nginx/oddo.error.log;' >> $NGINX_CONFIG_FILE_AVAILABLE    
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE   
+echo '	ssl                          on;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	ssl_certificate              /etc/nginx/ssl/server.crt;' >> $NGINX_CONFIG_FILE_AVAILABLE 
+echo '	ssl_certificate_key          /etc/nginx/ssl/server.key;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	ssl_session_timeout          10h;' >> $NGINX_CONFIG_FILE_AVAILABLE 
+echo '	ssl_protocols                SSLv3 TLSv1;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	ssl_ciphers                  HIGH:!ADH:!MD5;' >> $NGINX_CONFIG_FILE_AVAILABLE 
+echo '	ssl_prefer_server_ciphers    on;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	keepalive_timeout   240;' >> $NGINX_CONFIG_FILE_AVAILABLE 
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+
+echo '	location / {' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	proxy_pass http://$NGINX_URL:8069/;' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '	 }' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '}' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+
+#activate site
+ln -s /$NGINX_CONFIG_FILE_AVAILABLE $NGINX_CONFIG_FILE_ENABLED
+#restart service
+sudo service nginx reload
+
+echo "******************************************************************"
+echo "	Installation of ODOO $ODOO_GIT_VERSION complete"
+echo ""
+echo "	Start/Stop server with /etc/init.d/$ODOO_CONFIGFILE_NAME"
+echo ""
+echo "	The server is available internaly:"
+echo "	http://localhost:8069 "
+echo "	The server is available externaly:"
+echo "	$NGINX_URL_PREFIX$NGINX_URL:$NGINX_PORT"
+echo "******************************************************************"
