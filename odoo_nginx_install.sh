@@ -326,6 +326,7 @@ server {
     proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
 	
     # set headers
+    proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -361,7 +362,7 @@ server {
 
     location / {
         proxy_redirect off;
-        proxy_pass http://odoo;
+        proxy_pass http://127.0.0.1:8069;
     }
 
     location /longpolling {
