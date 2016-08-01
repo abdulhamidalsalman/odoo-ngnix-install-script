@@ -186,6 +186,7 @@ sudo sed -i "/db_user/d" /etc/$ODOO_CONFIG.conf
 sudo sed -i "/admin_passwd/d" /etc/$ODOO_CONFIG.conf
 sudo sed -i "/addons_path/d" /etc/$ODOO_CONFIG.conf
 sudo sed -i "/xmlrpc_port/d" /etc/$ODOO_CONFIG.conf
+sudo sed -i "/proxy_mode/d" /etc/$ODOO_CONFIG.conf
 
 echo -e "** Add correct lines"
 sudo su root -c "echo 'db_user = $ODOO_USER' >> /etc/$ODOO_CONFIG.conf"
@@ -193,6 +194,7 @@ sudo su root -c "echo 'admin_passwd = $ODOO_SUPERADMIN' >> /etc/$ODOO_CONFIG.con
 sudo su root -c "echo 'logfile = /var/log/$ODOO_USER/$ODOO_CONFIG$1.log' >> /etc/$ODOO_CONFIG.conf"
 sudo su root -c "echo 'addons_path=$ODOO_HOME_EXT/addons,$ODOO_HOME/custom/addons' >> /etc/$ODOO_CONFIG.conf"
 sudo su root -c "echo 'xmlrpc_port = $ODOO_PORT' >> /etc/$ODOO_CONFIG.conf"
+sudo su root -c "echo 'proxy_mode = True' >> /etc/$ODOO_CONFIG.conf"
 
 
 echo -e "* Create startup file"
@@ -293,18 +295,19 @@ echo -e "\n- NGINX config file location = $NGINX_CONFIG_AVAILABLE"
 
 echo -e "* Create init file"
 cat <<EOF > ~/$NGINX_CONFIG
-upstream odoo8 {
-    server 127.0.0.1:8069 weight=1 fail_timeout=0;
+#odoo server
+upstream odoo {
+    server 127.0.0.1:8069;
 }
 
-upstream odoo8-im {
-    server 127.0.0.1:8072 weight=1 fail_timeout=0;
+upstream odoochat {
+    server 127.0.0.1:8072;
 }
 
 ## http redirects to https ##
 server {
     listen 80;
-    server_name _;
+    server_name $DOMAIN_NAME;
 
     # Strict Transport Security
     add_header Strict-Transport-Security max-age=2592000;
@@ -314,7 +317,20 @@ server {
 server {
     # server port and name
     listen 443;
-    server_name _;
+    server_name $DOMAIN_NAME;
+    #general proxy settings
+    proxy_connect_timeout 600s;
+    proxy_send_timeout 600s;
+    proxy_read_timeout 600s;
+    # force timeouts if the backend dies
+    proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+	
+    # set headers
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Real-IP $remote_addr;
+
 
     # Specifies the maximum accepted body size of a client request,
     # as indicated by the request header Content-Length.
@@ -325,42 +341,31 @@ server {
     ssl on;
     ssl_certificate /etc/ssl/nginx/server.crt;
     ssl_certificate_key /etc/ssl/nginx/server.key;
-
+    ssl_session_timeout 30m;
     # limit ciphers
     ssl_ciphers HIGH:!ADH:!MD5;
-    ssl_protocols SSLv3 TLSv1;
+    ssl_protocols SSLv3 TLSv1 TLSv1.1 TLSv1.2;
     ssl_prefer_server_ciphers on;
 
     # increase proxy buffer to handle some OpenERP web requests
     proxy_buffers 16 64k;
     proxy_buffer_size 128k;
 
-    #general proxy settings
-    # force timeouts if the backend dies
-    proxy_connect_timeout 600s;
-    proxy_send_timeout 600s;
-    proxy_read_timeout 600s;
-    proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+    # log
+    access_log /var/log/nginx/odoo.access.log;
+    error_log /var/log/nginx/odoo.error.log;
 
-    # set headers
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forward-For $proxy_add_x_forwarded_for;
-
-    # Let the OpenERP web service know that we’re using HTTPS, otherwise
-    # it will generate URL using http:// and not https://
-    proxy_set_header X-Forwarded-Proto https;
 
     # by default, do not forward anything
-    proxy_redirect off;
     proxy_buffering off;
 
     location / {
-        proxy_pass http://odoo8;
+        proxy_redirect off;
+        proxy_pass http://odoo;
     }
 
     location /longpolling {
-        proxy_pass http://odoo8-im;
+        proxy_pass http://odoochat;
     }
 
     # cache some static data in memory for 60mins.
@@ -371,6 +376,9 @@ server {
         expires 864000;
         proxy_pass http://odoo8;
     }
+     # common gzip
+    gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript;
+    gzip on;
 }
 EOF
 
