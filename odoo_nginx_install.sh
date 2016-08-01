@@ -37,7 +37,7 @@ OE_CONFIG="${OE_USER}-server"
 NGINX_URL="odoo.mycompany.com"
 NGINX_URL_PREFIX="https://"
 NGINX_PORT="443"
-NGINX_CONFIG_FILE="$NGINX_URL" #file name for config
+NGINX_CONFIG="$NGINX_URL" #file name for config
 
 #--------------------------------------------------
 # WKHTMLTOPDF
@@ -251,72 +251,59 @@ sudo update-rc.d $OE_CONFIG defaults
 echo -e "* Starting Odoo Service"
 sudo su root -c "/etc/init.d/$OE_CONFIG start"
 
-echo "-----------------------------------------------------------"
-echo "Done! The Odoo server is up and running. Specifications:"
-echo "Port: $OE_PORT"
-echo "User service: $OE_USER"
-echo "User PostgreSQL: $OE_USER"
-echo "Code location: $OE_USER"
-echo "Addons folder: $OE_USER/$OE_CONFIG/addons/"
-echo "Start Odoo service: sudo service $OE_CONFIG start"
-echo "Stop Odoo service: sudo service $OE_CONFIG stop"
-echo "Restart Odoo service: sudo service $OE_CONFIG restart"
-echo "-----------------------------------------------------------"
-
 #--------------------------------------------------
 # Installing NGINX reverse proxy
 #--------------------------------------------------
 sudo apt-get install nginx -f -y
 
-NGINX_CONFIG_FILE_AVAILABLE="/etc/nginx/sites-available/$NGINX_CONFIG_FILE" #the config file
-NGINX_CONFIG_FILE_ENABLED="/etc/nginx/sites-enabled/$NGINX_CONFIG_FILE" #the link path
-echo -e "\n- NGINX config file location = $NGINX_CONFIG_FILE_AVAILABLE"
+NGINX_CONFIG_AVAILABLE="/etc/nginx/sites-available/$NGINX_CONFIG" #the config file
+NGINX_CONFIG_ENABLED="/etc/nginx/sites-enabled/$NGINX_CONFIG" #the link path
+echo -e "\n- NGINX config file location = $NGINX_CONFIG_AVAILABLE"
 
-echo -e "\n---- Create NGINX config file"
-sudo cp /etc/nginx/sites-available/default $NGINX_CONFIG_FILE_AVAILABLE
-sudo chown root:root $NGINX_CONFIG_FILE_AVAILABLE
-sudo chmod 640 $NGINX_CONFIG_FILE_AVAILABLE
+echo -e "* Create init file"
+cat <<EOF > ~/$NGINX_CONFIG
+server {
+	listen 80;
+	server_name $NGINX_URL;
+	add_header Strict-Transport-Security max-age=2592000;
+	rewrite ^/.*$ https://escape"$host$request_uri"? permanent;
+} 
+     
+server {
+  listen 443;
+  server_name $NGINX_URL;
+  proxy_set_header Host escape"$host";
+  proxy_buffering off;
 
-echo '################################################################################' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo 'NGINX configuration for $NGINX_URL' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '################################################################################' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo 'server {' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	listen 80;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	server_name $NGINX_URL;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	add_header Strict-Transport-Security max-age=2592000;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	rewrite ^/.*$ https://escape"$host$request_uri"? permanent;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '}' >> $NGINX_CONFIG_FILE_AVAILABLE 
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE     
-echo 'server {' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '  listen 443;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '  server_name $NGINX_URL;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '  proxy_set_header Host escape"$host";' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '  proxy_buffering off;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	# add ssl specific settings' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	# keepalive_timeout    240;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	access_log  /var/log/nginx/oddo.access.log;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	error_log   /var/log/nginx/oddo.error.log;' >> $NGINX_CONFIG_FILE_AVAILABLE    
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE   
-echo '	ssl                          on;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	ssl_certificate              /etc/nginx/ssl/server.crt;' >> $NGINX_CONFIG_FILE_AVAILABLE 
-echo '	ssl_certificate_key          /etc/nginx/ssl/server.key;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	ssl_session_timeout          10h;' >> $NGINX_CONFIG_FILE_AVAILABLE 
-echo '	ssl_protocols                SSLv3 TLSv1;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	ssl_ciphers                  HIGH:!ADH:!MD5;' >> $NGINX_CONFIG_FILE_AVAILABLE 
-echo '	ssl_prefer_server_ciphers    on;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	keepalive_timeout   240;' >> $NGINX_CONFIG_FILE_AVAILABLE 
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+	# add ssl specific settings
+	# keepalive_timeout    240;
+	access_log  /var/log/nginx/oddo.access.log;
+	error_log   /var/log/nginx/oddo.error.log;    
+   
+	ssl                          on;
+	ssl_certificate              /etc/nginx/ssl/server.crt; 
+	ssl_certificate_key          /etc/nginx/ssl/server.key;
+	ssl_session_timeout          10h; 
+	ssl_protocols                SSLv3 TLSv1;
+	ssl_ciphers                  HIGH:!ADH:!MD5; 
+	ssl_prefer_server_ciphers    on;
+	keepalive_timeout   240; 
 
-echo '	location / {' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	proxy_pass http://$NGINX_URL:8069/;' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '	 }' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '}' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
-echo '' >> $NGINX_CONFIG_FILE_AVAILABLE
+	location / {
+	proxy_pass http://$NGINX_URL:8069/;
+	 }
+}
+EOF
+
+echo -e "* Security Init NGINX Config File"
+sudo mv ~/$NGINX_CONFIG $NGINX_CONFIG_AVAILABLE
+sudo chown root:root $NGINX_CONFIG_AVAILABLE
+sudo chmod 640 $NGINX_CONFIG_AVAILABLE
+
+
 
 #activate site
-ln -s /$NGINX_CONFIG_FILE_AVAILABLE $NGINX_CONFIG_FILE_ENABLED
+ln -s /$NGINX_CONFIG_AVAILABLE $NGINX_CONFIG_ENABLED
 #restart service
 sudo service nginx reload
 
@@ -330,3 +317,16 @@ echo "	http://localhost:8069 "
 echo "	The server is available externaly:"
 echo "	$NGINX_URL_PREFIX$NGINX_URL:$NGINX_PORT"
 echo "******************************************************************"
+
+
+echo "-----------------------------------------------------------"
+echo "Done! The Odoo server is up and running. Specifications:"
+echo "Port: $OE_PORT"
+echo "User service: $OE_USER"
+echo "User PostgreSQL: $OE_USER"
+echo "Code location: $OE_USER"
+echo "Addons folder: $OE_USER/$OE_CONFIG/addons/"
+echo "Start Odoo service: sudo service $OE_CONFIG start"
+echo "Stop Odoo service: sudo service $OE_CONFIG stop"
+echo "Restart Odoo service: sudo service $OE_CONFIG restart"
+echo "-----------------------------------------------------------"
