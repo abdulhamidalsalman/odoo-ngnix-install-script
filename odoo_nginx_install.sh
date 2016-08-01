@@ -4,7 +4,7 @@
 # Author: Yenthe Van Ginneken
 # Modified By: Abdulhamid Alsalman
 #-------------------------------------------------------------------------------
-# This script will install Odoo on your Ubuntu 14.04 server. It can install multiple Odoo instances
+# This script will install Odoo and Nginx Reverse Proxy on your Ubuntu 14.04 server. It can install multiple Odoo instances
 # in one Ubuntu because of the different xmlrpc_ports
 #-------------------------------------------------------------------------------
 # Make a new file:
