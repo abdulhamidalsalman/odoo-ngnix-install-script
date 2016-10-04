@@ -59,6 +59,7 @@ WKHTMLTOX_X32=http://download.gna.org/wkhtmltopdf/0.12/0.12.1/wkhtmltox-0.12.1_l
 # Update Server
 #--------------------------------------------------
 echo -e "\n---- Update Server ----"
+apt-get install sudo
 sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt-get install -y locales
@@ -92,7 +93,10 @@ echo -e "\n---- Create ODOO system user ----"
 sudo adduser --system --quiet --shell=/bin/bash --home=$ODOO_HOME --gecos 'ODOO' --group $ODOO_USER
 
 #The user should also be added to the sudo'ers group.
-#sudo adduser $ODOO_USER sudo
+sudo adduser $ODOO_USER sudo
+
+# Ask and set a password of the new user
+sudo passwd $ODOO_USER 
 
 echo -e "\n---- Create Log directory ----"
 sudo mkdir /var/log/$ODOO_USER
