@@ -83,6 +83,8 @@ sudo sed -i s/"#listen_addresses = 'localhost'"/"listen_addresses = '*'"/g /etc/
 echo -e "\n---- Creating the ODOO PostgreSQL User  ----"
 sudo su - postgres -c "createuser -s $ODOO_USER" 2> /dev/null || true
 
+#TODO createuser --createdb --username postgres --no-createrole --no-superuser --pwprompt odoo
+
 sudo service postgresql restart
 
 #--------------------------------------------------
