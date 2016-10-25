@@ -73,6 +73,7 @@ sudo export LANG=en_US.UTF-8
 sudo export LC_ALL=en_US.UTF-8
 sudo locale-gen en_US.UTF-8
 sudo dpkg-reconfigure locales
+sudo update-locale LANG=en_US.UTF-8
 
 echo -e "\n---- Install PostgreSQL Server ----"
 sudo apt-get install postgresql -y
