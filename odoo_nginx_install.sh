@@ -304,7 +304,7 @@ echo -e "* Create init file"
 cat <<EOF > ~/$NGINX_CONFIG
 #odoo server
 upstream odoo {
-    server 127.0.0.1:8069;
+    server 127.0.0.1:$ODOO_PORT;
 }
 
 upstream odoochat {
@@ -360,8 +360,8 @@ server {
     proxy_buffer_size 128k;
 
     # log
-    access_log /var/log/nginx/odoo.access.log;
-    error_log /var/log/nginx/odoo.error.log;
+    access_log /var/log/nginx/${DOMAIN_NAME}.odoo.access.log;
+    error_log /var/log/nginx/${DOMAIN_NAME}.odoo.error.log;
 
 
     # by default, do not forward anything
