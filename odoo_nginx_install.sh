@@ -349,7 +349,8 @@ server {
     ssl on;
     ssl_certificate $SSL_CERT;
     ssl_certificate_key $SSL_CERTK;
-    ssl_session_timeout 30m;
+    ssl_session_timeout 60m;
+    ssl_session_cache shared:SSL:50m;
     # limit ciphers
     ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';    ssl_protocols SSLv3 TLSv1 TLSv1.1 TLSv1.2;
     ssl_prefer_server_ciphers on;
@@ -364,11 +365,12 @@ server {
 
 
     # by default, do not forward anything
+    proxy_redirect off;
     proxy_buffering off;
 
     location / {
-        proxy_redirect off;
-        proxy_pass http://127.0.0.1:8069;
+        proxy_pass http://127.0.0.1:$ODOO_PORT;
+	proxy_read_timeout  90;
     }
 
     location /longpolling {
@@ -381,7 +383,7 @@ server {
         proxy_cache_valid 200 60m;
         proxy_buffering on;
         expires 864000;
-        proxy_pass http://odoo8;
+        proxy_pass http://odoo;
     }
      # common gzip
     gzip_types text/css text/less text/plain text/xml application/xml application/json application/javascript;
