@@ -322,10 +322,12 @@ server {
 }
 
 server {
+    server_tokens off;
     # server port and name
     listen 443;
     server_name $DOMAIN_NAME;
     #general proxy settings
+    send_timeout 600;
     proxy_connect_timeout 600s;
     proxy_send_timeout 600s;
     proxy_read_timeout 600s;
@@ -342,8 +344,8 @@ server {
 
     # Specifies the maximum accepted body size of a client request,
     # as indicated by the request header Content-Length.
-    client_max_body_size 2m;
-    keepalive_timeout 300;
+    client_max_body_size 8m;
+    keepalive_timeout 600;
     # add ssl specific settings
    
     ssl on;
