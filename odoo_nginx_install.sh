@@ -379,7 +379,8 @@ server {
 
     # cache some static data in memory for 60mins.
     # under heavy load this should relieve stress on the OpenERP web interface a bit.
-    location /web/static/ {
+    location ~* /web/static/ {
+	access_log off;
         proxy_cache_valid 200 60m;
         proxy_buffering on;
         expires 864000;
