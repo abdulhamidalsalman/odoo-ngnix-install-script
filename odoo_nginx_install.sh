@@ -343,9 +343,9 @@ server {
     # Specifies the maximum accepted body size of a client request,
     # as indicated by the request header Content-Length.
     client_max_body_size 2m;
-
+    keepalive_timeout 300;
     # add ssl specific settings
-    keepalive_timeout 60;
+   
     ssl on;
     ssl_certificate $SSL_CERT;
     ssl_certificate_key $SSL_CERTK;
