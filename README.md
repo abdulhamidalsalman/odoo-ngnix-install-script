@@ -1,4 +1,4 @@
-# odoo-9-installation-script
+# odoo-9-installation-script under development
 
 <h3>Installation procedure</h3>
 1. Download the script:
