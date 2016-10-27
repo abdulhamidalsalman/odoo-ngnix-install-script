@@ -1,8 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Script for installing Odoo V9 on Ubuntu 14.04 LTS (could be used for other version too)
-# Author: Yenthe Van Ginneken
-# Modified By: Abdulhamid Alsalman
+# Author:  Abdulhamid Alsalman
 #-------------------------------------------------------------------------------
 # This script will install Odoo and Nginx Reverse Proxy on your Ubuntu 14.04 server. It can install multiple Odoo instances
 # in one Ubuntu because of the different xmlrpc_ports
